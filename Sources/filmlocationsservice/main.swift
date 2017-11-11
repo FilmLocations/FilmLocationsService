@@ -120,7 +120,7 @@ router.post("locations/:locationId/like/:userId") { request, response, next in
     let likes = database["likes"]
     
     do {
-        try likes.insert(["locationId": locationId, "userId": userId] as Document)
+        try likes.insert(["locationId": locationId, "userId": userId, "date": Date()] as Document)
     } catch {
         response.status(.internalServerError)
     }
@@ -208,7 +208,7 @@ router.post("locations/:locationId/visit/:userId") { request, response, next in
     let visits = database["visits"]
     
     do {
-        try visits.insert(["locationId": locationId, "userId": userId] as Document)
+        try visits.insert(["locationId": locationId, "userId": userId, "date": Date()] as Document)
     } catch {
         response.status(.internalServerError)
     }
@@ -231,6 +231,61 @@ router.delete("locations/:locationId/visit/:userId") { request, response, next i
     }
     
     response.status(.OK)
+}
+
+// Images
+router.post("/images", middleware: BodyParser())
+router.post("/images") { request, response, next in
+    defer { next() }
+    
+    guard let values = request.body else {
+        try response.status(.badRequest).end()
+        return
+    }
+    
+    guard case .json(let body) = values else {
+        try response.status(.badRequest).end()
+        return
+    }
+    
+    let image: Document = ["name" : body["name"].stringValue,
+                 "placeId" : body["placeId"].stringValue,
+                 "userId": body["userId"].stringValue,
+                 "description": body["description"].stringValue,
+                 "date": Date()]
+    
+    let images = database["images"]
+    
+    do {
+        try images.insert(image)
+    } catch {
+        response.status(.internalServerError)
+    }
+    
+    response.status(.OK)
+}
+
+// Query by userId or placeId currently
+router.get("/images") { request, response, next in
+    defer { next() }
+    
+    let images = database["images"]
+    var imageJSONs: JSONArray = []
+    var query: Query? = nil
+    
+    if let userId = request.queryParameters["userId"] {
+        query = "userId" == userId
+    } else if let placeId = request.queryParameters["placeId"] {
+        query = "placeId" == placeId
+    } else {
+        try response.status(.badRequest).end()
+    }
+    
+    for document in try images.find(query) {
+        imageJSONs.append(document.makeExtendedJSON(typeSafe: true))
+    }
+    
+    response.status(.OK).send(imageJSONs.serializedString())
 }
 
 
