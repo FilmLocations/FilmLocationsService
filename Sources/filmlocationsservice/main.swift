@@ -65,18 +65,20 @@ router.get("/locations") { request, response, next in
     let locations = database["locations"]
     
     guard try locations.findOne() != nil else {
-        print("not found")
-        response.status(.OK).send("No locations")
+        Log.error("No locations found")
+        response.status(.OK).send("No locations found")
         return
     }
     
+    let sort: Sort = ["year": .descending,
+                      "popularity": .descending]
+    
     var locationJSONs:JSONArray = []
     
-    for document in try locations.find() {
+    for document in try locations.find(sortedBy: sort) {
         locationJSONs.append(document.makeExtendedJSON(typeSafe: true))
     }
     
-    //let string = location.makeExtendedJSON(typeSafe: true).serializedString()
     response.status(.OK).send(locationJSONs.serializedString())
 }
 
