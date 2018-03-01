@@ -10,17 +10,15 @@ import DotEnv
 
 let env = DotEnv(withFile: ".env")
 
-HeliumLogger.use()
-
-let logger = HeliumLogger(.verbose)
-Log.logger = logger
+HeliumLogger.use(.verbose)
 
 // Create new router
 let router = Router()
 let cors = CORS(options: Options())
 router.all(middleware: cors)
 
-let database = try Database(env.get("MONGODB_CONNECTION_STRING")!)
+let database = try Database(env.get("MONGODB_CONNECTION_STRING") ?? "mongodb://localhost:27017/filmlocations")
+
 
 // Check server connection
 router.get("/") { request, response, next in
