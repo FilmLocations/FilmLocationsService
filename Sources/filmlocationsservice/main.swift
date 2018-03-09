@@ -90,7 +90,7 @@ router.get("locations/:locationId/likes") { request, response, next in
     
     let likes = database["likes"]
     
-    let count = try likes.find("locationId" == locationId).count()
+    let count = try likes.find("locationId" == ObjectId(locationId)).count()
     
     response.status(.OK).send(count.serializedString())
 }
@@ -103,7 +103,7 @@ router.get("locations/:locationId/like/:userId") { request, response, next in
     
     let likes = database["likes"]
     
-    guard (try likes.findOne("locationId" == locationId && "userId" == userId) != nil) else {
+    guard (try likes.findOne("locationId" == ObjectId(locationId) && "userId" == userId) != nil) else {
         response.status(.OK).send("false")
         return
     }
@@ -119,8 +119,13 @@ router.post("locations/:locationId/like/:userId") { request, response, next in
     
     let likes = database["likes"]
     
+    guard (try likes.findOne("locationId" == ObjectId(locationId) && "userId" == userId) == nil) else {
+        response.status(.OK).send("Like already exists")
+        return
+    }
+    
     do {
-        try likes.insert(["locationId": locationId, "userId": userId, "date": Date()] as Document)
+        try likes.insert(["locationId": ObjectId(locationId), "userId": userId, "date": Date()] as Document)
     } catch {
         response.status(.internalServerError)
     }
@@ -137,7 +142,7 @@ router.delete("locations/:locationId/like/:userId") { request, response, next in
     let likes = database["likes"]
     
     do {
-        try likes.remove(["locationId": locationId, "userId": userId])
+        try likes.remove(["locationId": ObjectId(locationId), "userId": userId])
     } catch {
         response.status(.internalServerError)
     }
@@ -178,7 +183,7 @@ router.get("locations/:locationId/visits") { request, response, next in
     
     let visits = database["visits"]
     
-    let count = try visits.find("locationId" == locationId).count()
+    let count = try visits.find("locationId" == ObjectId(locationId)).count()
     
     response.status(.OK).send(count.serializedString())
 }
@@ -191,7 +196,7 @@ router.get("locations/:locationId/visit/:userId") { request, response, next in
     
     let visits = database["visits"]
     
-    guard (try visits.findOne("locationId" == locationId && "userId" == userId) != nil) else {
+    guard (try visits.findOne("locationId" == ObjectId(locationId) && "userId" == userId) != nil) else {
         response.status(.OK).send("false")
         return
     }
@@ -207,8 +212,13 @@ router.post("locations/:locationId/visit/:userId") { request, response, next in
     
     let visits = database["visits"]
     
+    guard (try visits.findOne("locationId" == ObjectId(locationId) && "userId" == userId) == nil) else {
+        response.status(.OK).send("Visit already exists")
+        return
+    }
+    
     do {
-        try visits.insert(["locationId": locationId, "userId": userId, "date": Date()] as Document)
+        try visits.insert(["locationId": ObjectId(locationId), "userId": userId, "date": Date()] as Document)
     } catch {
         response.status(.internalServerError)
     }
@@ -225,7 +235,7 @@ router.delete("locations/:locationId/visit/:userId") { request, response, next i
     let visits = database["visits"]
     
     do {
-        try visits.remove(["locationId": locationId, "userId": userId])
+        try visits.remove(["locationId": ObjectId(locationId), "userId": userId])
     } catch {
         response.status(.internalServerError)
     }
@@ -248,7 +258,13 @@ router.post("/images") { request, response, next in
         return
     }
     
+    guard let locationId = try? ObjectId(body["locationId"].stringValue) else {
+        try response.status(.badRequest).end()
+        return
+    }
+
     let image: Document = ["name" : body["name"].stringValue,
+                 "locationId" : locationId,
                  "placeId" : body["placeId"].stringValue,
                  "userId": body["userId"].stringValue,
                  "description": body["description"].stringValue,
@@ -265,7 +281,7 @@ router.post("/images") { request, response, next in
     response.status(.OK)
 }
 
-// Query by userId or placeId currently
+// Query by userId or locationId currently
 router.get("/images") { request, response, next in
     defer { next() }
     
@@ -275,8 +291,12 @@ router.get("/images") { request, response, next in
     
     if let userId = request.queryParameters["userId"] {
         query = "userId" == userId
-    } else if let placeId = request.queryParameters["placeId"] {
-        query = "placeId" == placeId
+    } else if let locationId = request.queryParameters["locationId"] {
+        guard let objectId = try? ObjectId(locationId) else {
+            try response.status(.badRequest).end()
+            return
+        }
+        query = "locationId" == ObjectId(objectId)
     } else {
         try response.status(.badRequest).end()
     }
