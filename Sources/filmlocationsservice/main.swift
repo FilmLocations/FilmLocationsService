@@ -32,6 +32,25 @@ router.get("/") { request, response, next in
     next()
 }
 
+router.get("/support") { request, response, next in
+    defer { next() }
+
+    let html = """
+        <!DOCTYPE html>
+        <html>
+        <body style="background-color:#00BCD4FF;">
+
+        <center>
+        <p>For questions and support, <a href=\"mailto:jessica.thrasher@gmail.com\">email us!</a></p>
+        </center>
+
+        </body>
+        </html>
+        """
+    
+    response.send(html)
+}
+
 router.get("/test") { request, response, next in
     defer { next() }
     
